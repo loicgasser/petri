@@ -21,6 +21,7 @@ export class UI {
   private elSpecies!: HTMLElement;
   private elPlayBtn!: HTMLButtonElement;
   private elSelected!: HTMLElement;
+  private elHallOfFame!: HTMLElement;
 
   constructor(config: SimConfig, world: World, stats: Stats, onReset: () => void) {
     this.config = config;
@@ -41,6 +42,7 @@ export class UI {
     this.elSpecies = document.getElementById('species-list')!;
     this.elPlayBtn = document.getElementById('btn-play') as HTMLButtonElement;
     this.elSelected = document.getElementById('selected-creature')!;
+    this.elHallOfFame = document.getElementById('hall-of-fame')!;
 
     // Play/Pause
     this.elPlayBtn.addEventListener('click', () => {
@@ -167,6 +169,20 @@ export class UI {
       `;
     } else {
       this.elTopCreature.innerHTML = '<div class="empty">No creatures alive</div>';
+    }
+
+    // Hall of Fame
+    if (this.world.hallOfFame.length > 0) {
+      const causeEmoji = { starved: '💀', eaten: '🔴', culled: '⚡' };
+      this.elHallOfFame.innerHTML = this.world.hallOfFame.map((e, i) => `
+        <div class="hof-entry">
+          <span class="hof-rank">${i + 1}</span>
+          <span class="species-dot" style="background: hsl(${e.genome.hue}, 75%, 50%)"></span>
+          <span>Gen ${e.generation}</span>
+          <span class="hof-cause">${causeEmoji[e.cause]}</span>
+          <span class="hof-age">${e.age} ticks</span>
+        </div>
+      `).join('');
     }
 
     // Species list

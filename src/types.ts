@@ -57,11 +57,21 @@ export interface SimConfig {
   autoRecover: boolean;
 }
 
+export interface HallOfFameEntry {
+  id: number;
+  age: number;
+  generation: number;
+  genome: Genome;
+  cause: 'starved' | 'eaten' | 'culled';
+  diedAtTick: number;
+}
+
 export interface PopulationSnapshot {
   tick: number;
   count: number;
   avgSpeed: number;
   avgSize: number;
   avgAggression: number;
+  avgMetabolism: number;
   diversityIndex: number;
 }

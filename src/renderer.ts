@@ -8,11 +8,57 @@ export class Renderer {
   private centerX: number = 0;
   private centerY: number = 0;
   selectedCreatureId: number | null = null;
+  private zoom: number = 1;
+  private panX: number = 0;
+  private panY: number = 0;
+  private isDragging: boolean = false;
+  private dragStartX: number = 0;
+  private dragStartY: number = 0;
+  private dragStartPanX: number = 0;
+  private dragStartPanY: number = 0;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.resize();
+    this.setupZoomPan();
+  }
+
+  private setupZoomPan(): void {
+    this.canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      this.zoom = Math.max(0.5, Math.min(5, this.zoom * zoomFactor));
+    }, { passive: false });
+
+    this.canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 1 || (e.button === 0 && e.shiftKey)) { // Middle click or shift+click to pan
+        this.isDragging = true;
+        this.dragStartX = e.clientX;
+        this.dragStartY = e.clientY;
+        this.dragStartPanX = this.panX;
+        this.dragStartPanY = this.panY;
+        e.preventDefault();
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (this.isDragging) {
+        this.panX = this.dragStartPanX + (e.clientX - this.dragStartX) / this.zoom;
+        this.panY = this.dragStartPanY + (e.clientY - this.dragStartY) / this.zoom;
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      this.isDragging = false;
+    });
+
+    // Double-click to reset zoom
+    this.canvas.addEventListener('dblclick', () => {
+      this.zoom = 1;
+      this.panX = 0;
+      this.panY = 0;
+    });
   }
 
   resize(): void {
@@ -34,6 +80,12 @@ export class Renderer {
     // Clear with motion blur effect
     ctx.fillStyle = 'rgba(10, 10, 15, 0.3)';
     ctx.fillRect(0, 0, rect.width, rect.height);
+
+    // Apply zoom and pan
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(this.zoom, this.zoom);
+    ctx.translate(-cx + this.panX, -cy + this.panY);
 
     // Draw world boundary and grid
     this.drawBoundary(cx, cy, config.worldRadius);
@@ -59,7 +111,19 @@ export class Renderer {
       this.drawParticle(particle, cx, cy);
     }
 
-    // Draw event notifications
+    // Draw selection highlight
+    if (this.selectedCreatureId !== null) {
+      const selected = world.creatures.find(c => c.id === this.selectedCreatureId);
+      if (selected) {
+        this.drawSelection(selected, cx, cy);
+      } else {
+        this.selectedCreatureId = null;
+      }
+    }
+
+    ctx.restore(); // End zoom/pan transform
+
+    // Draw event notifications (not affected by zoom)
     if (events) {
       const active = events.getActive();
       active.forEach((event, i) => {
@@ -71,8 +135,6 @@ export class Renderer {
         ctx.save();
         ctx.font = `bold 16px 'SF Mono', 'Fira Code', monospace`;
         ctx.textAlign = 'center';
-        ctx.fillStyle = event.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba').replace('#', '');
-        // Use hex color with alpha
         ctx.globalAlpha = alpha;
         ctx.fillStyle = event.color;
         ctx.fillText(`${event.emoji} ${event.text}`, cx, yOffset);
@@ -80,21 +142,22 @@ export class Renderer {
       });
     }
 
-    // Draw selection highlight
-    if (this.selectedCreatureId !== null) {
-      const selected = world.creatures.find(c => c.id === this.selectedCreatureId);
-      if (selected) {
-        this.drawSelection(selected, cx, cy);
-      } else {
-        this.selectedCreatureId = null;
-      }
+    // Draw zoom indicator
+    if (this.zoom !== 1) {
+      ctx.save();
+      ctx.font = `11px 'SF Mono', monospace`;
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.textAlign = 'right';
+      ctx.fillText(`${this.zoom.toFixed(1)}×`, rect.width - 12, rect.height - 12);
+      ctx.restore();
     }
   }
 
   handleClick(clientX: number, clientY: number, creatures: Creature[]): Creature | null {
     const rect = this.canvas.getBoundingClientRect();
-    const x = clientX - rect.left - this.centerX;
-    const y = clientY - rect.top - this.centerY;
+    // Account for zoom and pan
+    const x = (clientX - rect.left - this.centerX) / this.zoom - this.panX;
+    const y = (clientY - rect.top - this.centerY) / this.zoom - this.panY;
 
     let closest: Creature | null = null;
     let closestDist = 30; // max click distance

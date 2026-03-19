@@ -1,10 +1,12 @@
-import type { Creature, Food, Particle, SimConfig } from './types';
+import type { Creature, Food, Particle, SimConfig, HallOfFameEntry } from './types';
 import { SpatialGrid } from './spatial';
 import { steerToward, wander, fleeFrom, updateCreaturePhysics, createCreature, randomGenome } from './creature';
 import { spawnFood, updateFood, createFood } from './food';
 import { tryReproduce } from './evolution';
 import { distance, randomPointInCircle } from './utils';
 import { INITIAL_CREATURES, INITIAL_FOOD, PREY_ENERGY_GAIN } from './config';
+
+const HALL_OF_FAME_SIZE = 5;
 
 export class World {
   creatures: Creature[] = [];
@@ -13,9 +15,28 @@ export class World {
   tick: number = 0;
   totalBorn: number = 0;
   totalDied: number = 0;
+  hallOfFame: HallOfFameEntry[] = [];
 
   private creatureGrid = new SpatialGrid<Creature>();
   private foodGrid = new SpatialGrid<Food>();
+
+  private recordDeath(creature: Creature, cause: HallOfFameEntry['cause']): void {
+    const entry: HallOfFameEntry = {
+      id: creature.id,
+      age: creature.age,
+      generation: creature.generation,
+      genome: { ...creature.genome },
+      cause,
+      diedAtTick: this.tick,
+    };
+
+    // Only keep top N by age
+    this.hallOfFame.push(entry);
+    this.hallOfFame.sort((a, b) => b.age - a.age);
+    if (this.hallOfFame.length > HALL_OF_FAME_SIZE) {
+      this.hallOfFame.pop();
+    }
+  }
 
   init(config: SimConfig): void {
     this.creatures = [];
@@ -24,6 +45,7 @@ export class World {
     this.tick = 0;
     this.totalBorn = 0;
     this.totalDied = 0;
+    this.hallOfFame = [];
 
     // Spawn initial creatures
     for (let i = 0; i < INITIAL_CREATURES; i++) {
@@ -196,6 +218,7 @@ export class World {
               creature.lastAte = this.tick;
               deadCreatureIds.add(other.id);
               this.spawnParticles(other.x, other.y, other.genome.hue, 'death', 8);
+              this.recordDeath(other, 'eaten');
               this.totalDied++;
             }
           }
@@ -221,6 +244,7 @@ export class World {
       if (deadCreatureIds.has(c.id)) return false;
       if (c.energy <= 0) {
         this.spawnParticles(c.x, c.y, c.genome.hue, 'death', 6);
+        this.recordDeath(c, 'starved');
         this.totalDied++;
         return false;
       }
@@ -234,6 +258,9 @@ export class World {
     if (this.creatures.length > config.maxCreatures) {
       this.creatures.sort((a, b) => b.energy - a.energy);
       const removed = this.creatures.splice(config.maxCreatures);
+      for (const c of removed) {
+        this.recordDeath(c, 'culled');
+      }
       this.totalDied += removed.length;
     }
 

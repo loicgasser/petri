@@ -391,6 +391,52 @@ html, body {
   font-weight: 600;
 }
 
+/* Hall of Fame */
+.hall-of-fame {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hof-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: var(--bg-section);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.hof-rank {
+  font-weight: 700;
+  color: var(--text-dim);
+  min-width: 16px;
+}
+
+.hof-entry:first-child .hof-rank {
+  color: #ffd700;
+}
+
+.hof-entry:nth-child(2) .hof-rank {
+  color: #c0c0c0;
+}
+
+.hof-entry:nth-child(3) .hof-rank {
+  color: #cd7f32;
+}
+
+.hof-age {
+  font-weight: 700;
+  color: var(--accent);
+  margin-left: auto;
+}
+
+.hof-cause {
+  font-size: 9px;
+  color: var(--text-dim);
+}
+
 /* Shortcuts */
 .shortcut-grid {
   display: grid;

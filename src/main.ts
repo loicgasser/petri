@@ -22,9 +22,11 @@ function reset(): void {
 function init(): void {
   const mainCanvas = document.getElementById('petri-canvas') as HTMLCanvasElement;
   const chartCanvas = document.getElementById('chart-canvas') as HTMLCanvasElement;
+  const evoCanvas = document.getElementById('evolution-chart') as HTMLCanvasElement;
 
   renderer = new Renderer(mainCanvas);
   stats.initChart(chartCanvas);
+  stats.initEvoChart(evoCanvas);
 
   ui = new UI(config, world, stats, () => {
     reset();

@@ -7,6 +7,7 @@ Chart.register(...registerables);
 export class Stats {
   snapshots: PopulationSnapshot[] = [];
   private chart: Chart | null = null;
+  private evoChart: Chart | null = null;
   private chartCanvas: HTMLCanvasElement | null = null;
 
   initChart(canvas: HTMLCanvasElement): void {
@@ -69,6 +70,65 @@ export class Stats {
     });
   }
 
+  initEvoChart(canvas: HTMLCanvasElement): void {
+    this.evoChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: 'Avg Size',
+            data: [],
+            borderColor: '#ffa726',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3,
+            yAxisID: 'y',
+          },
+          {
+            label: 'Avg Metabolism ×10',
+            data: [],
+            borderColor: '#ab47bc',
+            borderWidth: 1,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3,
+            yAxisID: 'y',
+          },
+          {
+            label: 'Diversity %',
+            data: [],
+            borderColor: '#26c6da',
+            borderWidth: 1,
+            pointRadius: 0,
+            fill: false,
+            tension: 0.3,
+            yAxisID: 'y',
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 0 },
+        scales: {
+          x: { display: false },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 10 } },
+          },
+        },
+        plugins: {
+          legend: {
+            labels: { color: 'rgba(255,255,255,0.7)', font: { size: 10 } },
+          },
+        },
+      },
+    });
+  }
+
   update(tick: number, creatures: Creature[]): void {
     if (tick % STATS_INTERVAL !== 0) return;
 
@@ -80,17 +140,20 @@ export class Stats {
         avgSpeed: 0,
         avgSize: 0,
         avgAggression: 0,
+        avgMetabolism: 0,
         diversityIndex: 0,
       });
     } else {
       let totalSpeed = 0;
       let totalSize = 0;
       let totalAgg = 0;
+      let totalMeta = 0;
 
       for (const c of creatures) {
         totalSpeed += c.genome.speed;
         totalSize += c.genome.size;
         totalAgg += c.genome.aggression;
+        totalMeta += c.genome.metabolism;
       }
 
       this.snapshots.push({
@@ -99,6 +162,7 @@ export class Stats {
         avgSpeed: totalSpeed / count,
         avgSize: totalSize / count,
         avgAggression: totalAgg / count,
+        avgMetabolism: totalMeta / count,
         diversityIndex: this.calcDiversity(creatures),
       });
     }
@@ -143,6 +207,15 @@ export class Stats {
     this.chart.data.datasets[1].data = aggData;
     this.chart.data.datasets[2].data = speedData;
     this.chart.update('none');
+
+    // Update evolution chart
+    if (this.evoChart) {
+      this.evoChart.data.labels = labels;
+      this.evoChart.data.datasets[0].data = this.snapshots.map(s => s.avgSize);
+      this.evoChart.data.datasets[1].data = this.snapshots.map(s => s.avgMetabolism * 10);
+      this.evoChart.data.datasets[2].data = this.snapshots.map(s => s.diversityIndex * 100);
+      this.evoChart.update('none');
+    }
   }
 
   getLatest(): PopulationSnapshot | null {
@@ -172,12 +245,14 @@ export class Stats {
 
   reset(): void {
     this.snapshots = [];
-    if (this.chart) {
-      this.chart.data.labels = [];
-      for (const ds of this.chart.data.datasets) {
-        ds.data = [];
+    for (const chart of [this.chart, this.evoChart]) {
+      if (chart) {
+        chart.data.labels = [];
+        for (const ds of chart.data.datasets) {
+          ds.data = [];
+        }
+        chart.update('none');
       }
-      this.chart.update('none');
     }
   }
 }
