@@ -2,6 +2,8 @@ import type { SimConfig, Creature } from './types';
 import type { World } from './world';
 import type { Stats } from './stats';
 import { DEFAULT_CONFIG } from './config';
+import { saveEcosystem, loadEcosystem } from './persistence';
+import { Environment } from './environment';
 
 export class UI {
   private config: SimConfig;
@@ -74,6 +76,45 @@ export class UI {
 
     document.getElementById('btn-add-creature')!.addEventListener('click', () => {
       this.world.addCreature(this.config);
+    });
+
+    document.getElementById('btn-save')!.addEventListener('click', () => {
+      saveEcosystem(
+        this.world.tick,
+        this.world.totalBorn,
+        this.world.totalDied,
+        this.world.creatures,
+        this.world.foods,
+        this.world.hallOfFame,
+        this.world.environment.zones,
+        this.config,
+      );
+    });
+
+    document.getElementById('btn-load')!.addEventListener('click', async () => {
+      const state = await loadEcosystem();
+      if (!state) return;
+      // Restore state
+      this.world.creatures = state.creatures;
+      this.world.foods = state.foods;
+      this.world.tick = state.tick;
+      this.world.totalBorn = state.totalBorn;
+      this.world.totalDied = state.totalDied;
+      this.world.hallOfFame = state.hallOfFame;
+      this.world.environment = new Environment(state.config.worldRadius);
+      this.world.environment.zones = state.zones;
+      // Restore config
+      Object.assign(this.config, state.config);
+      // Update sliders
+      (document.getElementById('slider-food') as HTMLInputElement).value = this.config.foodSpawnRate.toString();
+      document.getElementById('slider-food-value')!.textContent = this.config.foodSpawnRate.toFixed(2);
+      (document.getElementById('slider-mutation-rate') as HTMLInputElement).value = this.config.mutationRate.toString();
+      document.getElementById('slider-mutation-rate-value')!.textContent = this.config.mutationRate.toFixed(2);
+      (document.getElementById('slider-mutation-strength') as HTMLInputElement).value = this.config.mutationStrength.toString();
+      document.getElementById('slider-mutation-strength-value')!.textContent = this.config.mutationStrength.toFixed(2);
+      (document.getElementById('slider-friction') as HTMLInputElement).value = this.config.friction.toString();
+      document.getElementById('slider-friction-value')!.textContent = this.config.friction.toFixed(2);
+      this.stats.reset();
     });
 
     document.getElementById('btn-reset')!.addEventListener('click', () => {
