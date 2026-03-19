@@ -1,6 +1,7 @@
 import type { Creature, Food, Particle, SimConfig } from './types';
 import type { World } from './world';
 import type { EventSystem } from './events';
+import type { Zone } from './environment';
 
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
@@ -90,6 +91,13 @@ export class Renderer {
     // Draw world boundary and grid
     this.drawBoundary(cx, cy, config.worldRadius);
     this.drawGrid(cx, cy, config.worldRadius);
+
+    // Draw environment zones
+    if (world.environment) {
+      for (const zone of world.environment.zones) {
+        this.drawZone(zone, cx, cy);
+      }
+    }
 
     // Draw food
     for (const food of world.foods) {
@@ -228,6 +236,56 @@ export class Renderer {
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  private drawZone(zone: Zone, cx: number, cy: number): void {
+    const ctx = this.ctx;
+    const x = cx + zone.x;
+    const y = cy + zone.y;
+
+    let color: string;
+    let labelColor: string;
+    switch (zone.type) {
+      case 'nutrient':
+        color = `rgba(100, 200, 255, ${zone.intensity * 0.12})`;
+        labelColor = 'rgba(100, 200, 255, 0.3)';
+        break;
+      case 'toxic':
+        color = `rgba(255, 80, 80, ${zone.intensity * 0.1})`;
+        labelColor = 'rgba(255, 80, 80, 0.3)';
+        break;
+      case 'fertile':
+        color = `rgba(100, 255, 100, ${zone.intensity * 0.1})`;
+        labelColor = 'rgba(100, 255, 100, 0.3)';
+        break;
+    }
+
+    // Zone gradient
+    const gradient = ctx.createRadialGradient(x, y, 0, x, y, zone.radius);
+    gradient.addColorStop(0, color);
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(x, y, zone.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Subtle border
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([3, 6]);
+    ctx.beginPath();
+    ctx.arc(x, y, zone.radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Label
+    ctx.save();
+    ctx.font = '9px monospace';
+    ctx.fillStyle = labelColor;
+    ctx.textAlign = 'center';
+    const label = zone.type === 'nutrient' ? '◆ nutrient' : zone.type === 'toxic' ? '☠ toxic' : '✦ fertile';
+    ctx.fillText(label, x, y - zone.radius - 4);
+    ctx.restore();
   }
 
   private drawGrid(cx: number, cy: number, radius: number): void {

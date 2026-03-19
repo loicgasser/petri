@@ -5,6 +5,7 @@ import { spawnFood, updateFood, createFood } from './food';
 import { tryReproduce } from './evolution';
 import { distance, randomPointInCircle } from './utils';
 import { INITIAL_CREATURES, INITIAL_FOOD, PREY_ENERGY_GAIN } from './config';
+import { Environment } from './environment';
 
 const HALL_OF_FAME_SIZE = 5;
 
@@ -16,6 +17,7 @@ export class World {
   totalBorn: number = 0;
   totalDied: number = 0;
   hallOfFame: HallOfFameEntry[] = [];
+  environment!: Environment;
 
   private creatureGrid = new SpatialGrid<Creature>();
   private foodGrid = new SpatialGrid<Food>();
@@ -46,6 +48,7 @@ export class World {
     this.totalBorn = 0;
     this.totalDied = 0;
     this.hallOfFame = [];
+    this.environment = new Environment(config.worldRadius);
 
     // Spawn initial creatures
     for (let i = 0; i < INITIAL_CREATURES; i++) {
@@ -189,6 +192,12 @@ export class World {
         wander(creature);
       }
 
+      // Apply environment effects
+      const envEffect = this.environment.getEffect(creature.x, creature.y);
+      if (envEffect.energyCost > 0) {
+        creature.energy -= envEffect.energyCost;
+      }
+
       // Physics
       updateCreaturePhysics(creature, config);
 
@@ -197,7 +206,8 @@ export class World {
         if (eatenFoodIds.has(f.id)) continue;
         const d = distance(creature.x, creature.y, f.x, f.y);
         if (d < creature.genome.size + 3) {
-          creature.energy += f.value;
+          const foodBonus = this.environment.getFoodSpawnBonus(f.x, f.y);
+          creature.energy += f.value * foodBonus;
           creature.lastAte = this.tick;
           eatenFoodIds.add(f.id);
           this.spawnParticles(f.x, f.y, 120, 'eat', 4);
