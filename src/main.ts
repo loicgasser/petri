@@ -69,7 +69,17 @@ function init(): void {
         break;
       case 'Escape':
         renderer.selectedCreatureId = null;
+        renderer.followMode = false;
         ui.updateSelectedCreature(null);
+        break;
+      case 't':
+        // Toggle follow mode
+        if (renderer.selectedCreatureId !== null) {
+          renderer.followMode = !renderer.followMode;
+          if (renderer.followMode && renderer.selectedCreatureId) {
+            // Auto-zoom when following
+          }
+        }
         break;
     }
   });
@@ -86,6 +96,7 @@ function loop(): void {
       events.check(world.tick, world.creatures.length, world.totalBorn, world.totalDied);
     }
     ui.updateStats();
+    renderer.updateHover(world.creatures);
 
     // Update selected creature info
     if (renderer.selectedCreatureId !== null) {

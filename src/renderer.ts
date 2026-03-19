@@ -9,6 +9,10 @@ export class Renderer {
   private centerX: number = 0;
   private centerY: number = 0;
   selectedCreatureId: number | null = null;
+  followMode: boolean = false;
+  private hoverCreature: Creature | null = null;
+  private mouseX: number = 0;
+  private mouseY: number = 0;
   private zoom: number = 1;
   private panX: number = 0;
   private panY: number = 0;
@@ -23,6 +27,36 @@ export class Renderer {
     this.ctx = canvas.getContext('2d')!;
     this.resize();
     this.setupZoomPan();
+    this.setupHover();
+  }
+
+  private setupHover(): void {
+    this.canvas.addEventListener('mousemove', (e) => {
+      if (this.isDragging) return;
+      this.mouseX = e.clientX;
+      this.mouseY = e.clientY;
+    });
+  }
+
+  updateHover(creatures: Creature[]): void {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = (this.mouseX - rect.left - this.centerX) / this.zoom - this.panX;
+    const y = (this.mouseY - rect.top - this.centerY) / this.zoom - this.panY;
+
+    let closest: Creature | null = null;
+    let closestDist = 25;
+
+    for (const c of creatures) {
+      const dx = c.x - x;
+      const dy = c.y - y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d < closestDist) {
+        closestDist = d;
+        closest = c;
+      }
+    }
+    this.hoverCreature = closest;
+    this.canvas.style.cursor = closest ? 'pointer' : 'default';
   }
 
   private setupZoomPan(): void {
@@ -81,6 +115,18 @@ export class Renderer {
     // Clear with motion blur effect
     ctx.fillStyle = 'rgba(10, 10, 15, 0.3)';
     ctx.fillRect(0, 0, rect.width, rect.height);
+
+    // Follow mode: track selected creature
+    if (this.followMode && this.selectedCreatureId !== null) {
+      const target = world.creatures.find(c => c.id === this.selectedCreatureId);
+      if (target) {
+        // Smoothly pan toward creature
+        const targetPanX = -target.x;
+        const targetPanY = -target.y;
+        this.panX += (targetPanX - this.panX) * 0.1;
+        this.panY += (targetPanY - this.panY) * 0.1;
+      }
+    }
 
     // Apply zoom and pan
     ctx.save();
@@ -150,6 +196,11 @@ export class Renderer {
       });
     }
 
+    // Draw hover tooltip
+    if (this.hoverCreature && this.hoverCreature.id !== this.selectedCreatureId) {
+      this.drawTooltip(this.hoverCreature);
+    }
+
     // Draw zoom indicator
     if (this.zoom !== 1) {
       ctx.save();
@@ -182,6 +233,49 @@ export class Renderer {
 
     this.selectedCreatureId = closest?.id ?? null;
     return closest;
+  }
+
+  private drawTooltip(creature: Creature): void {
+    const ctx = this.ctx;
+    const rect = this.canvas.getBoundingClientRect();
+    // Position tooltip near mouse
+    let tx = this.mouseX - rect.left + 15;
+    let ty = this.mouseY - rect.top - 10;
+    const g = creature.genome;
+    const role = g.aggression > 0.5 ? 'Predator' : 'Herbivore';
+
+    const lines = [
+      `#${creature.id} ${role} (Gen ${creature.generation})`,
+      `Age: ${creature.age}  Energy: ${creature.energy.toFixed(0)}`,
+      `Spd: ${g.speed.toFixed(1)}  Size: ${g.size.toFixed(1)}  Aggr: ${(g.aggression * 100).toFixed(0)}%`,
+    ];
+
+    const lineHeight = 14;
+    const padding = 6;
+    const width = 220;
+    const height = lines.length * lineHeight + padding * 2;
+
+    // Keep on screen
+    if (tx + width > rect.width) tx = tx - width - 30;
+    if (ty + height > rect.height) ty = rect.height - height - 5;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 15, 25, 0.9)';
+    ctx.strokeStyle = `hsla(${g.hue}, 60%, 50%, 0.5)`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(tx, ty, width, height, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.font = '11px monospace';
+    ctx.fillStyle = `hsl(${g.hue}, 70%, 70%)`;
+    ctx.textAlign = 'left';
+    lines.forEach((line, i) => {
+      ctx.fillStyle = i === 0 ? `hsl(${g.hue}, 70%, 70%)` : 'rgba(220, 220, 230, 0.8)';
+      ctx.fillText(line, tx + padding, ty + padding + (i + 1) * lineHeight - 2);
+    });
+    ctx.restore();
   }
 
   private drawSelection(creature: Creature, cx: number, cy: number): void {
