@@ -488,10 +488,10 @@ html, body {
     padding-bottom: env(safe-area-inset-bottom, 24px);
   }
 
-  /* Extra bottom padding so last section is never cut off */
+  /* Extra bottom padding so last section clears Android nav bar */
   #controls .control-section:last-child {
-    padding-bottom: 40px;
-    margin-bottom: 20px;
+    padding-bottom: 60px;
+    margin-bottom: 40px;
   }
 
   .panel-header h1 {
