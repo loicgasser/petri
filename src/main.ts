@@ -42,6 +42,36 @@ function init(): void {
     renderer.resize();
   });
 
+  // Keyboard shortcuts
+  window.addEventListener('keydown', (e) => {
+    if (e.target instanceof HTMLInputElement) return;
+    switch (e.key) {
+      case ' ':
+        e.preventDefault();
+        document.getElementById('btn-play')?.click();
+        break;
+      case '1':
+        document.querySelector<HTMLElement>('[data-speed="1"]')?.click();
+        break;
+      case '2':
+        document.querySelector<HTMLElement>('[data-speed="2"]')?.click();
+        break;
+      case '5':
+        document.querySelector<HTMLElement>('[data-speed="5"]')?.click();
+        break;
+      case 'f':
+        world.addFoodBurst(config);
+        break;
+      case 'c':
+        world.addCreature(config);
+        break;
+      case 'Escape':
+        renderer.selectedCreatureId = null;
+        ui.updateSelectedCreature(null);
+        break;
+    }
+  });
+
   requestAnimationFrame(loop);
 }
 

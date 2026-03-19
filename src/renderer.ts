@@ -35,8 +35,9 @@ export class Renderer {
     ctx.fillStyle = 'rgba(10, 10, 15, 0.3)';
     ctx.fillRect(0, 0, rect.width, rect.height);
 
-    // Draw world boundary
+    // Draw world boundary and grid
     this.drawBoundary(cx, cy, config.worldRadius);
+    this.drawGrid(cx, cy, config.worldRadius);
 
     // Draw food
     for (const food of world.foods) {
@@ -164,6 +165,36 @@ export class Renderer {
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  private drawGrid(cx: number, cy: number, radius: number): void {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(40, 60, 80, 0.06)';
+    ctx.lineWidth = 0.5;
+
+    // Clip to circle
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius - 1, 0, Math.PI * 2);
+    ctx.clip();
+
+    const step = 40;
+    const start = -Math.ceil(radius / step) * step;
+    const end = Math.ceil(radius / step) * step;
+
+    for (let x = start; x <= end; x += step) {
+      ctx.beginPath();
+      ctx.moveTo(cx + x, cy - radius);
+      ctx.lineTo(cx + x, cy + radius);
+      ctx.stroke();
+    }
+    for (let y = start; y <= end; y += step) {
+      ctx.beginPath();
+      ctx.moveTo(cx - radius, cy + y);
+      ctx.lineTo(cx + radius, cy + y);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   private drawFood(food: Food, cx: number, cy: number): void {
