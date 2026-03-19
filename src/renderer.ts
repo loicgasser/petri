@@ -1,5 +1,6 @@
 import type { Creature, Food, Particle, SimConfig } from './types';
 import type { World } from './world';
+import type { EventSystem } from './events';
 
 export class Renderer {
   private ctx: CanvasRenderingContext2D;
@@ -24,7 +25,7 @@ export class Renderer {
     this.centerY = rect.height / 2;
   }
 
-  render(world: World, config: SimConfig): void {
+  render(world: World, config: SimConfig, events?: EventSystem): void {
     const ctx = this.ctx;
     const cx = this.centerX;
     const cy = this.centerY;
@@ -55,6 +56,27 @@ export class Renderer {
     // Draw particles
     for (const particle of world.particles) {
       this.drawParticle(particle, cx, cy);
+    }
+
+    // Draw event notifications
+    if (events) {
+      const active = events.getActive();
+      active.forEach((event, i) => {
+        const elapsed = Date.now() - event.time;
+        const progress = elapsed / event.duration;
+        const alpha = progress < 0.2 ? progress / 0.2 : progress > 0.7 ? (1 - progress) / 0.3 : 1;
+        const yOffset = 60 + i * 40;
+
+        ctx.save();
+        ctx.font = `bold 16px 'SF Mono', 'Fira Code', monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillStyle = event.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba').replace('#', '');
+        // Use hex color with alpha
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = event.color;
+        ctx.fillText(`${event.emoji} ${event.text}`, cx, yOffset);
+        ctx.restore();
+      });
     }
 
     // Draw selection highlight
@@ -207,11 +229,22 @@ export class Renderer {
       ctx.stroke();
     }
 
-    // Body
+    // Body — organic amoeba-like shape
     const lightness = 40 + energyRatio * 25;
     ctx.fillStyle = `hsl(${hue}, 75%, ${lightness}%)`;
     ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
+    const segments = 8;
+    const wobbleTime = creature.age * 0.05 + creature.id * 137;
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const wobble = 1 + Math.sin(wobbleTime + i * 1.7) * 0.1 + Math.sin(wobbleTime * 0.7 + i * 2.3) * 0.05;
+      const r = size * wobble;
+      const px = x + Math.cos(angle) * r;
+      const py = y + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
     ctx.fill();
 
     // Aggression indicator (red inner ring for aggressive creatures)

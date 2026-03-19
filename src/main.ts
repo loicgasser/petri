@@ -3,11 +3,13 @@ import { World } from './world';
 import { Renderer } from './renderer';
 import { Stats } from './stats';
 import { UI } from './ui';
+import { EventSystem } from './events';
 import type { SimConfig } from './types';
 
 const config: SimConfig = { ...DEFAULT_CONFIG };
 const world = new World();
 const stats = new Stats();
+const events = new EventSystem();
 let renderer: Renderer;
 let ui: UI;
 
@@ -49,6 +51,7 @@ function loop(): void {
     for (let i = 0; i < ticks; i++) {
       world.step(config);
       stats.update(world.tick, world.creatures);
+      events.check(world.tick, world.creatures.length, world.totalBorn, world.totalDied);
     }
     ui.updateStats();
 
@@ -59,7 +62,7 @@ function loop(): void {
     }
   }
 
-  renderer.render(world, config);
+  renderer.render(world, config, events);
   requestAnimationFrame(loop);
 }
 
