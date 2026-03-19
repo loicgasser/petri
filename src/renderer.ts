@@ -201,8 +201,10 @@ export class Renderer {
       this.drawTooltip(this.hoverCreature);
     }
 
-    // Draw zoom indicator
-    if (this.zoom !== 1) {
+    // Draw minimap + zoom indicator when zoomed
+    if (this.zoom > 1.2) {
+      this.drawMinimap(world, config, rect);
+    } else if (this.zoom !== 1) {
       ctx.save();
       ctx.font = `11px 'SF Mono', monospace`;
       ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
@@ -210,6 +212,62 @@ export class Renderer {
       ctx.fillText(`${this.zoom.toFixed(1)}×`, rect.width - 12, rect.height - 12);
       ctx.restore();
     }
+  }
+
+  private drawMinimap(world: World, config: SimConfig, rect: DOMRect): void {
+    const ctx = this.ctx;
+    const mapSize = 100;
+    const margin = 10;
+    const mapX = rect.width - mapSize - margin;
+    const mapY = rect.height - mapSize - margin;
+    const scale = mapSize / (config.worldRadius * 2);
+    const mapCx = mapX + mapSize / 2;
+    const mapCy = mapY + mapSize / 2;
+
+    // Background
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = 'rgba(10, 10, 20, 0.85)';
+    ctx.strokeStyle = 'rgba(60, 120, 180, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(mapCx, mapCy, mapSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Creatures as dots
+    ctx.globalAlpha = 0.9;
+    for (const c of world.creatures) {
+      const mx = mapCx + c.x * scale;
+      const my = mapCy + c.y * scale;
+      ctx.fillStyle = `hsl(${c.genome.hue}, 70%, 55%)`;
+      ctx.beginPath();
+      ctx.arc(mx, my, Math.max(1, c.genome.size * scale * 0.5), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Viewport rectangle
+    const vpHalfW = (rect.width / 2) / this.zoom;
+    const vpHalfH = (rect.height / 2) / this.zoom;
+    const vpCx = -this.panX;
+    const vpCy = -this.panY;
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(
+      mapCx + (vpCx - vpHalfW) * scale,
+      mapCy + (vpCy - vpHalfH) * scale,
+      vpHalfW * 2 * scale,
+      vpHalfH * 2 * scale,
+    );
+
+    // Zoom label
+    ctx.font = '9px monospace';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.textAlign = 'center';
+    ctx.fillText(`${this.zoom.toFixed(1)}×`, mapCx, mapY - 3);
+
+    ctx.restore();
   }
 
   handleClick(clientX: number, clientY: number, creatures: Creature[]): Creature | null {
