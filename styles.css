@@ -472,13 +472,60 @@ html, body {
     flex-direction: column;
   }
   #canvas-container {
-    height: 50vh;
+    height: 45vh;
+    min-height: 250px;
   }
   #controls {
     width: 100%;
     min-width: 0;
-    height: 50vh;
+    flex: 1;
+    height: auto;
+    min-height: 0;
     border-left: none;
     border-top: 1px solid var(--border);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom, 24px);
+  }
+
+  /* Last section needs extra bottom padding so it's never cut off */
+  #controls .control-section:last-child {
+    padding-bottom: 24px;
+  }
+
+  .panel-header h1 {
+    font-size: 16px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .stat-value {
+    font-size: 14px;
+  }
+
+  .button-row.actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .slider-row input[type="range"]::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+  }
+
+  .slider-row input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+  }
+
+  .shortcuts {
+    display: none;
   }
 }

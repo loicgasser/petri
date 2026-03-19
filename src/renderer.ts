@@ -315,7 +315,9 @@ export class Renderer {
 
     // Keep on screen
     if (tx + width > rect.width) tx = tx - width - 30;
+    if (tx < 5) tx = 5;
     if (ty + height > rect.height) ty = rect.height - height - 5;
+    if (ty < 5) ty = 5;
 
     ctx.save();
     ctx.fillStyle = 'rgba(15, 15, 25, 0.9)';
