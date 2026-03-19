@@ -126,9 +126,11 @@ export function updateCreaturePhysics(creature: Creature, config: SimConfig): vo
   // Age & energy drain
   creature.age++;
   const speedSq = creature.vx * creature.vx + creature.vy * creature.vy;
-  const drain = (speedSq * creature.genome.size * creature.genome.metabolism) * 0.001;
-  // Base metabolic cost (so idle creatures still use energy)
-  const baseCost = creature.genome.size * creature.genome.metabolism * 0.003;
-  creature.energy -= drain + baseCost;
+  const drain = (speedSq * creature.genome.size * creature.genome.metabolism) * 0.0008;
+  // Base metabolic cost scales with size² (big creatures need proportionally more energy)
+  const baseCost = (creature.genome.size * creature.genome.size * creature.genome.metabolism) * 0.0004;
+  // Sense radius has a small energy cost (maintaining awareness)
+  const senseCost = creature.genome.senseRadius * 0.0001;
+  creature.energy -= drain + baseCost + senseCost;
   creature.energy = clamp(creature.energy, 0, creature.maxEnergy);
 }

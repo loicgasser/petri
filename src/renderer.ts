@@ -205,17 +205,21 @@ export class Renderer {
     const baseSize = 2 + (food.value / 30) * 2;
     const size = baseSize * pulse;
 
+    // Decay factor — food gets dimmer as it ages
+    const freshness = Math.max(0.2, 1 - (food.age / 800));
+    const hue = 120 * freshness + 40 * (1 - freshness); // green → yellow as it decays
+
     // Glow
     const glow = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
-    glow.addColorStop(0, 'rgba(100, 220, 100, 0.4)');
-    glow.addColorStop(1, 'rgba(100, 220, 100, 0.0)');
+    glow.addColorStop(0, `hsla(${hue}, 80%, 60%, ${0.4 * freshness})`);
+    glow.addColorStop(1, `hsla(${hue}, 80%, 60%, 0.0)`);
     ctx.fillStyle = glow;
     ctx.beginPath();
     ctx.arc(x, y, size * 3, 0, Math.PI * 2);
     ctx.fill();
 
     // Core
-    ctx.fillStyle = `rgba(120, 255, 120, ${0.7 + pulse * 0.15})`;
+    ctx.fillStyle = `hsla(${hue}, 85%, 60%, ${(0.7 + pulse * 0.15) * freshness})`;
     ctx.beginPath();
     ctx.arc(x, y, size, 0, Math.PI * 2);
     ctx.fill();
@@ -278,13 +282,43 @@ export class Renderer {
     ctx.closePath();
     ctx.fill();
 
-    // Aggression indicator (red inner ring for aggressive creatures)
+    // Cell membrane (outline)
+    ctx.strokeStyle = `hsla(${hue}, 60%, ${lightness + 15}%, 0.5)`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const wobble = 1 + Math.sin(wobbleTime + i * 1.7) * 0.1 + Math.sin(wobbleTime * 0.7 + i * 2.3) * 0.05;
+      const r = size * wobble;
+      const px = x + Math.cos(angle) * r;
+      const py = y + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    // Nucleus (inner circle)
+    const nucleusSize = size * 0.35;
+    ctx.fillStyle = `hsla(${hue}, 60%, ${lightness - 10}%, 0.6)`;
+    ctx.beginPath();
+    ctx.arc(x, y, nucleusSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Aggression indicator (red spikes for aggressive creatures)
     if (creature.genome.aggression > 0.5) {
-      ctx.strokeStyle = `rgba(255, 80, 80, ${(creature.genome.aggression - 0.5) * 0.8})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(x, y, size * 0.7, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.strokeStyle = `rgba(255, 80, 80, ${(creature.genome.aggression - 0.5) * 0.6})`;
+      ctx.lineWidth = 1.5;
+      const spikeCount = 6;
+      for (let i = 0; i < spikeCount; i++) {
+        const angle = (i / spikeCount) * Math.PI * 2 + wobbleTime * 0.3;
+        const innerR = size * 0.9;
+        const outerR = size * 1.3;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(angle) * innerR, y + Math.sin(angle) * innerR);
+        ctx.lineTo(x + Math.cos(angle) * outerR, y + Math.sin(angle) * outerR);
+        ctx.stroke();
+      }
     }
 
     // Eyes

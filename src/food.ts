@@ -42,8 +42,17 @@ export function spawnFood(foods: Food[], config: SimConfig): Food | null {
   return null;
 }
 
+const FOOD_MAX_AGE = 800; // food decays after this many ticks
+
 export function updateFood(foods: Food[]): void {
-  for (const food of foods) {
-    food.age++;
+  for (let i = foods.length - 1; i >= 0; i--) {
+    foods[i].age++;
+    // Food decays over time — value decreases, eventually disappears
+    if (foods[i].age > FOOD_MAX_AGE) {
+      foods.splice(i, 1);
+    } else if (foods[i].age > FOOD_MAX_AGE * 0.7) {
+      // Gradually lose value in the last 30% of its life
+      foods[i].value *= 0.998;
+    }
   }
 }
