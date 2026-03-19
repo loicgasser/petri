@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Petri — Artificial Life Simulator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <div id="canvas-container">
+      <canvas id="petri-canvas"></canvas>
+      <div id="canvas-title">PETRI</div>
+    </div>
+    <div id="controls">
+      <div class="panel-header">
+        <h1>🧫 Petri</h1>
+        <p class="subtitle">Artificial Life Simulator</p>
+      </div>
+
+      <div class="control-section">
+        <h2>Simulation</h2>
+        <div class="button-row">
+          <button id="btn-play" class="btn primary">⏸ Pause</button>
+          <div class="speed-group">
+            <button data-speed="1" class="btn speed active">1×</button>
+            <button data-speed="2" class="btn speed">2×</button>
+            <button data-speed="5" class="btn speed">5×</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <h2>Statistics</h2>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <span class="stat-label">Population</span>
+            <span class="stat-value" id="stat-population">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Tick</span>
+            <span class="stat-value" id="stat-tick">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Avg Gen</span>
+            <span class="stat-value" id="stat-generation">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Diversity</span>
+            <span class="stat-value" id="stat-diversity">0%</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Born</span>
+            <span class="stat-value born" id="stat-born">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Died</span>
+            <span class="stat-value died" id="stat-died">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <h2>Population</h2>
+        <div class="chart-container">
+          <canvas id="chart-canvas"></canvas>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <h2>Species</h2>
+        <div id="species-list" class="species-list"></div>
+      </div>
+
+      <div class="control-section">
+        <h2>Elder</h2>
+        <div id="top-creature" class="top-creature"></div>
+      </div>
+
+      <div class="control-section">
+        <h2>Selected</h2>
+        <div id="selected-creature" class="top-creature">
+          <div class="empty">Click a creature to inspect</div>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <h2>Parameters</h2>
+        <div class="slider-group">
+          <label>Food Spawn Rate</label>
+          <div class="slider-row">
+            <input type="range" id="slider-food">
+            <span id="slider-food-value" class="slider-value">0.30</span>
+          </div>
+        </div>
+        <div class="slider-group">
+          <label>Mutation Rate</label>
+          <div class="slider-row">
+            <input type="range" id="slider-mutation-rate">
+            <span id="slider-mutation-rate-value" class="slider-value">0.15</span>
+          </div>
+        </div>
+        <div class="slider-group">
+          <label>Mutation Strength</label>
+          <div class="slider-row">
+            <input type="range" id="slider-mutation-strength">
+            <span id="slider-mutation-strength-value" class="slider-value">0.10</span>
+          </div>
+        </div>
+        <div class="slider-group">
+          <label>Friction</label>
+          <div class="slider-row">
+            <input type="range" id="slider-friction">
+            <span id="slider-friction-value" class="slider-value">0.97</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <h2>Actions</h2>
+        <div class="button-row actions">
+          <button id="btn-food-burst" class="btn">🌿 Food Burst</button>
+          <button id="btn-add-creature" class="btn">🦠 Add Creature</button>
+          <button id="btn-reset" class="btn danger">↺ Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
