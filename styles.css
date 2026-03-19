@@ -488,9 +488,10 @@ html, body {
     padding-bottom: env(safe-area-inset-bottom, 24px);
   }
 
-  /* Last section needs extra bottom padding so it's never cut off */
+  /* Extra bottom padding so last section is never cut off */
   #controls .control-section:last-child {
-    padding-bottom: 24px;
+    padding-bottom: 40px;
+    margin-bottom: 20px;
   }
 
   .panel-header h1 {
