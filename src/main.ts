@@ -4,12 +4,14 @@ import { Renderer } from './renderer';
 import { Stats } from './stats';
 import { UI } from './ui';
 import { EventSystem } from './events';
+import { AudioSystem } from './audio';
 import type { SimConfig } from './types';
 
 const config: SimConfig = { ...DEFAULT_CONFIG };
 const world = new World();
 const stats = new Stats();
 const events = new EventSystem();
+const audio = new AudioSystem();
 let renderer: Renderer;
 let ui: UI;
 
@@ -30,6 +32,12 @@ function init(): void {
 
   ui = new UI(config, world, stats, () => {
     reset();
+  });
+
+  // Sound toggle button
+  document.getElementById('btn-sound')!.addEventListener('click', () => {
+    const soundOn = audio.toggle();
+    document.getElementById('btn-sound')!.textContent = soundOn ? '🔊 Sound On' : '🔇 Sound Off';
   });
 
   // Click to select creature
@@ -76,10 +84,13 @@ function init(): void {
         // Toggle follow mode
         if (renderer.selectedCreatureId !== null) {
           renderer.followMode = !renderer.followMode;
-          if (renderer.followMode && renderer.selectedCreatureId) {
-            // Auto-zoom when following
-          }
         }
+        break;
+      case 'm':
+        // Toggle sound
+        const soundOn = audio.toggle();
+        const soundBtn = document.getElementById('btn-sound');
+        if (soundBtn) soundBtn.textContent = soundOn ? '🔊 Sound On' : '🔇 Sound Off';
         break;
     }
   });
@@ -91,10 +102,16 @@ function loop(): void {
   if (!ui.isPaused()) {
     const ticks = config.speedMultiplier;
     for (let i = 0; i < ticks; i++) {
-      world.step(config);
+      const result = world.step(config);
       stats.update(world.tick, world.creatures);
       events.check(world.tick, world.creatures.length, world.totalBorn, world.totalDied);
+
+      // Audio feedback
+      if (result.ate > 0) audio.onEat();
+      if (result.died > 0) audio.onDeath();
+      if (result.born > 0) audio.onBirth();
     }
+    audio.updateAmbient(world.creatures.length);
     ui.updateStats();
     renderer.updateHover(world.creatures);
 

@@ -1,4 +1,4 @@
-import type { Creature, Food, Particle, SimConfig, HallOfFameEntry } from './types';
+import type { Creature, Food, Particle, SimConfig, HallOfFameEntry, StepResult } from './types';
 import { SpatialGrid } from './spatial';
 import { steerToward, wander, fleeFrom, updateCreaturePhysics, createCreature, randomGenome } from './creature';
 import { spawnFood, updateFood, createFood } from './food';
@@ -109,8 +109,11 @@ export class World {
     }
   }
 
-  step(config: SimConfig): void {
+  step(config: SimConfig): StepResult {
     this.tick++;
+    let ateCount = 0;
+    let diedCount = 0;
+    let bornCount = 0;
 
     // Spawn food
     spawnFood(this.foods, config);
@@ -210,6 +213,7 @@ export class World {
           creature.energy += f.value * foodBonus;
           creature.lastAte = this.tick;
           eatenFoodIds.add(f.id);
+          ateCount++;
           this.spawnParticles(f.x, f.y, 120, 'eat', 4);
         }
       }
@@ -230,6 +234,7 @@ export class World {
               this.spawnParticles(other.x, other.y, other.genome.hue, 'death', 8);
               this.recordDeath(other, 'eaten');
               this.totalDied++;
+              diedCount++;
             }
           }
         }
@@ -241,6 +246,7 @@ export class World {
         if (child) {
           newCreatures.push(child);
           this.totalBorn++;
+          bornCount++;
           this.spawnParticles(creature.x, creature.y, creature.genome.hue, 'birth', 6);
         }
       }
@@ -256,6 +262,7 @@ export class World {
         this.spawnParticles(c.x, c.y, c.genome.hue, 'death', 6);
         this.recordDeath(c, 'starved');
         this.totalDied++;
+        diedCount++;
         return false;
       }
       return true;
@@ -287,5 +294,7 @@ export class World {
 
     // Update particles
     this.updateParticles();
+
+    return { ate: ateCount, died: diedCount, born: bornCount };
   }
 }

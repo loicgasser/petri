@@ -66,6 +66,12 @@ export interface HallOfFameEntry {
   diedAtTick: number;
 }
 
+export interface StepResult {
+  ate: number;
+  died: number;
+  born: number;
+}
+
 export interface PopulationSnapshot {
   tick: number;
   count: number;
