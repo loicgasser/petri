@@ -42,6 +42,10 @@ function init(): void {
 
   // Click to select creature
   mainCanvas.addEventListener('click', (e) => {
+    if (renderer.skipNextClick) {
+      renderer.skipNextClick = false;
+      return;
+    }
     const creature = renderer.handleClick(e.clientX, e.clientY, world.creatures);
     ui.updateSelectedCreature(creature);
   });
@@ -101,7 +105,9 @@ function init(): void {
 function loop(): void {
   if (!ui.isPaused()) {
     const ticks = config.speedMultiplier;
+    const frameStart = performance.now();
     for (let i = 0; i < ticks; i++) {
+      if (i > 0 && performance.now() - frameStart > 14) break;
       const result = world.step(config);
       stats.update(world.tick, world.creatures);
       events.check(world.tick, world.creatures.length, world.totalBorn, world.totalDied);

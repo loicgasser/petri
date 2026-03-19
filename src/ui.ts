@@ -4,6 +4,7 @@ import type { Stats } from './stats';
 import { DEFAULT_CONFIG } from './config';
 import { saveEcosystem, loadEcosystem } from './persistence';
 import { Environment } from './environment';
+import { setNextId } from './utils';
 
 export class UI {
   private config: SimConfig;
@@ -115,6 +116,11 @@ export class UI {
       (document.getElementById('slider-friction') as HTMLInputElement).value = this.config.friction.toString();
       document.getElementById('slider-friction-value')!.textContent = this.config.friction.toFixed(2);
       this.stats.reset();
+      // Sync nextId to avoid ID collisions
+      let maxId = 0;
+      for (const c of state.creatures) { if (c.id > maxId) maxId = c.id; }
+      for (const f of state.foods) { if (f.id > maxId) maxId = f.id; }
+      setNextId(maxId + 1);
     });
 
     document.getElementById('btn-reset')!.addEventListener('click', () => {

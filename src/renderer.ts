@@ -21,6 +21,7 @@ export class Renderer {
   private dragStartY: number = 0;
   private dragStartPanX: number = 0;
   private dragStartPanY: number = 0;
+  skipNextClick: boolean = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -93,6 +94,59 @@ export class Renderer {
       this.zoom = 1;
       this.panX = 0;
       this.panY = 0;
+      this.skipNextClick = true;
+    });
+
+    // Touch support
+    let touchStartDist = 0;
+    let touchStartZoom = 1;
+    let touchStartPanX = 0;
+    let touchStartPanY = 0;
+    let touchStartMidX = 0;
+    let touchStartMidY = 0;
+    let touchMode: 'none' | 'pan' | 'pinch' = 'none';
+
+    this.canvas.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        touchMode = 'pinch';
+        const dx = e.touches[1].clientX - e.touches[0].clientX;
+        const dy = e.touches[1].clientY - e.touches[0].clientY;
+        touchStartDist = Math.sqrt(dx * dx + dy * dy);
+        touchStartZoom = this.zoom;
+        touchStartPanX = this.panX;
+        touchStartPanY = this.panY;
+        touchStartMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        touchStartMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      } else if (e.touches.length === 1) {
+        touchMode = 'pan';
+        this.dragStartX = e.touches[0].clientX;
+        this.dragStartY = e.touches[0].clientY;
+        this.dragStartPanX = this.panX;
+        this.dragStartPanY = this.panY;
+      }
+    }, { passive: false });
+
+    this.canvas.addEventListener('touchmove', (e) => {
+      if (touchMode === 'pinch' && e.touches.length === 2) {
+        e.preventDefault();
+        const dx = e.touches[1].clientX - e.touches[0].clientX;
+        const dy = e.touches[1].clientY - e.touches[0].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        this.zoom = Math.max(0.5, Math.min(5, touchStartZoom * (dist / touchStartDist)));
+        const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+        const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        this.panX = touchStartPanX + (midX - touchStartMidX) / this.zoom;
+        this.panY = touchStartPanY + (midY - touchStartMidY) / this.zoom;
+      } else if (touchMode === 'pan' && e.touches.length === 1) {
+        e.preventDefault();
+        this.panX = this.dragStartPanX + (e.touches[0].clientX - this.dragStartX) / this.zoom;
+        this.panY = this.dragStartPanY + (e.touches[0].clientY - this.dragStartY) / this.zoom;
+      }
+    }, { passive: false });
+
+    this.canvas.addEventListener('touchend', () => {
+      touchMode = 'none';
     });
   }
 
@@ -541,34 +595,35 @@ export class Renderer {
 
     // Body — organic amoeba-like shape
     const lightness = 40 + energyRatio * 25;
-    ctx.fillStyle = `hsl(${hue}, 75%, ${lightness}%)`;
-    ctx.beginPath();
     const segments = 8;
     const wobbleTime = creature.age * 0.05 + creature.id * 137;
+
+    // Precompute wobble points once
+    const wobblePoints: { px: number; py: number }[] = [];
     for (let i = 0; i <= segments; i++) {
       const angle = (i / segments) * Math.PI * 2;
       const wobble = 1 + Math.sin(wobbleTime + i * 1.7) * 0.1 + Math.sin(wobbleTime * 0.7 + i * 2.3) * 0.05;
       const r = size * wobble;
-      const px = x + Math.cos(angle) * r;
-      const py = y + Math.sin(angle) * r;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+      wobblePoints.push({ px: x + Math.cos(angle) * r, py: y + Math.sin(angle) * r });
+    }
+
+    // Fill
+    ctx.fillStyle = `hsl(${hue}, 75%, ${lightness}%)`;
+    ctx.beginPath();
+    for (let i = 0; i < wobblePoints.length; i++) {
+      if (i === 0) ctx.moveTo(wobblePoints[i].px, wobblePoints[i].py);
+      else ctx.lineTo(wobblePoints[i].px, wobblePoints[i].py);
     }
     ctx.closePath();
     ctx.fill();
 
-    // Cell membrane (outline)
+    // Cell membrane (outline) — reuse same path
     ctx.strokeStyle = `hsla(${hue}, 60%, ${lightness + 15}%, 0.5)`;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let i = 0; i <= segments; i++) {
-      const angle = (i / segments) * Math.PI * 2;
-      const wobble = 1 + Math.sin(wobbleTime + i * 1.7) * 0.1 + Math.sin(wobbleTime * 0.7 + i * 2.3) * 0.05;
-      const r = size * wobble;
-      const px = x + Math.cos(angle) * r;
-      const py = y + Math.sin(angle) * r;
-      if (i === 0) ctx.moveTo(px, py);
-      else ctx.lineTo(px, py);
+    for (let i = 0; i < wobblePoints.length; i++) {
+      if (i === 0) ctx.moveTo(wobblePoints[i].px, wobblePoints[i].py);
+      else ctx.lineTo(wobblePoints[i].px, wobblePoints[i].py);
     }
     ctx.closePath();
     ctx.stroke();

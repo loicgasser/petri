@@ -119,20 +119,14 @@ export class World {
     spawnFood(this.foods, config);
     updateFood(this.foods);
 
-    // Build spatial grids
+    // --- Phase 1: steering + physics (move all creatures) ---
+    // Build grids for AI decisions (pre-move positions)
     this.creatureGrid.clear();
     this.creatureGrid.insertAll(this.creatures);
     this.foodGrid.clear();
     this.foodGrid.insertAll(this.foods);
 
-    const newCreatures: Creature[] = [];
-    const eatenFoodIds = new Set<number>();
-    const deadCreatureIds = new Set<number>();
-
-    // Update each creature
     for (const creature of this.creatures) {
-      if (deadCreatureIds.has(creature.id)) continue;
-
       // Find nearest food
       const nearbyFoods = this.foodGrid.query(
         creature.x, creature.y, creature.genome.senseRadius,
@@ -140,7 +134,6 @@ export class World {
       let nearestFood: Food | null = null;
       let nearestFoodDist = Infinity;
       for (const f of nearbyFoods) {
-        if (eatenFoodIds.has(f.id)) continue;
         const d = distance(creature.x, creature.y, f.x, f.y);
         if (d < nearestFoodDist) {
           nearestFoodDist = d;
@@ -160,7 +153,7 @@ export class World {
 
       // Check for threats (bigger aggressive creatures)
       for (const other of nearbyCreatures) {
-        if (other.id === creature.id || deadCreatureIds.has(other.id)) continue;
+        if (other.id === creature.id) continue;
         if (other.genome.aggression > 0.5 && other.genome.size > creature.genome.size * 1.2) {
           const d = distance(creature.x, creature.y, other.x, other.y);
           if (d < creature.genome.senseRadius * 0.7) {
@@ -175,7 +168,7 @@ export class World {
       // Predators look for prey
       if (!shouldFlee && creature.genome.aggression > 0.5) {
         for (const other of nearbyCreatures) {
-          if (other.id === creature.id || deadCreatureIds.has(other.id)) continue;
+          if (other.id === creature.id) continue;
           if (other.genome.size < creature.genome.size * 0.8) {
             const d = distance(creature.x, creature.y, other.x, other.y);
             if (d < nearestFoodDist * 0.7) {
@@ -203,8 +196,26 @@ export class World {
 
       // Physics
       updateCreaturePhysics(creature, config);
+    }
+
+    // --- Phase 2: rebuild grids with post-move positions ---
+    this.creatureGrid.clear();
+    this.creatureGrid.insertAll(this.creatures);
+    this.foodGrid.clear();
+    this.foodGrid.insertAll(this.foods);
+
+    // --- Phase 3: collision checks ---
+    const newCreatures: Creature[] = [];
+    const eatenFoodIds = new Set<number>();
+    const deadCreatureIds = new Set<number>();
+
+    for (const creature of this.creatures) {
+      if (deadCreatureIds.has(creature.id)) continue;
 
       // Check food eating
+      const nearbyFoods = this.foodGrid.query(
+        creature.x, creature.y, creature.genome.size + 3,
+      );
       for (const f of nearbyFoods) {
         if (eatenFoodIds.has(f.id)) continue;
         const d = distance(creature.x, creature.y, f.x, f.y);

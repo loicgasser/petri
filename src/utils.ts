@@ -29,3 +29,7 @@ let _nextId = 1;
 export function nextId(): number {
   return _nextId++;
 }
+
+export function setNextId(n: number): void {
+  _nextId = n;
+}
