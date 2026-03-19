@@ -14,6 +14,8 @@ export class Renderer {
   private mouseX: number = 0;
   private mouseY: number = 0;
   private zoom: number = 1;
+  private zoomManuallyChanged: boolean = false;
+  private worldRadius: number = 0;
   private panX: number = 0;
   private panY: number = 0;
   private isDragging: boolean = false;
@@ -65,6 +67,7 @@ export class Renderer {
       e.preventDefault();
       const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
       this.zoom = Math.max(0.5, Math.min(5, this.zoom * zoomFactor));
+      this.zoomManuallyChanged = true;
     }, { passive: false });
 
     this.canvas.addEventListener('mousedown', (e) => {
@@ -105,11 +108,16 @@ export class Renderer {
     let touchStartMidX = 0;
     let touchStartMidY = 0;
     let touchMode: 'none' | 'pan' | 'pinch' = 'none';
+    let isTap = false;
+    let tapStartX = 0;
+    let tapStartY = 0;
+    let tapStartTime = 0;
 
     this.canvas.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
         e.preventDefault();
         touchMode = 'pinch';
+        isTap = false;
         const dx = e.touches[1].clientX - e.touches[0].clientX;
         const dy = e.touches[1].clientY - e.touches[0].clientY;
         touchStartDist = Math.sqrt(dx * dx + dy * dy);
@@ -120,6 +128,10 @@ export class Renderer {
         touchStartMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
       } else if (e.touches.length === 1) {
         touchMode = 'pan';
+        isTap = true;
+        tapStartX = e.touches[0].clientX;
+        tapStartY = e.touches[0].clientY;
+        tapStartTime = Date.now();
         this.dragStartX = e.touches[0].clientX;
         this.dragStartY = e.touches[0].clientY;
         this.dragStartPanX = this.panX;
@@ -134,18 +146,36 @@ export class Renderer {
         const dy = e.touches[1].clientY - e.touches[0].clientY;
         const dist = Math.sqrt(dx * dx + dy * dy);
         this.zoom = Math.max(0.5, Math.min(5, touchStartZoom * (dist / touchStartDist)));
+        this.zoomManuallyChanged = true;
         const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
         const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         this.panX = touchStartPanX + (midX - touchStartMidX) / this.zoom;
         this.panY = touchStartPanY + (midY - touchStartMidY) / this.zoom;
       } else if (touchMode === 'pan' && e.touches.length === 1) {
+        const dx = e.touches[0].clientX - tapStartX;
+        const dy = e.touches[0].clientY - tapStartY;
+        if (Math.sqrt(dx * dx + dy * dy) > 8) {
+          isTap = false;
+        }
         e.preventDefault();
         this.panX = this.dragStartPanX + (e.touches[0].clientX - this.dragStartX) / this.zoom;
         this.panY = this.dragStartPanY + (e.touches[0].clientY - this.dragStartY) / this.zoom;
       }
     }, { passive: false });
 
-    this.canvas.addEventListener('touchend', () => {
+    this.canvas.addEventListener('touchend', (e) => {
+      if (isTap && Date.now() - tapStartTime < 300) {
+        this.mouseX = tapStartX;
+        this.mouseY = tapStartY;
+        // Dispatch a synthetic click for tap-to-select
+        const clickEvent = new MouseEvent('click', {
+          clientX: tapStartX,
+          clientY: tapStartY,
+          bubbles: true,
+        });
+        this.canvas.dispatchEvent(clickEvent);
+      }
+      isTap = false;
       touchMode = 'none';
     });
   }
@@ -158,9 +188,16 @@ export class Renderer {
     this.ctx.scale(dpr, dpr);
     this.centerX = rect.width / 2;
     this.centerY = rect.height / 2;
+    if (this.worldRadius > 0 && !this.zoomManuallyChanged) {
+      this.zoom = Math.min(1, Math.min(rect.width, rect.height) / (this.worldRadius * 2 + 40));
+    }
   }
 
   render(world: World, config: SimConfig, events?: EventSystem): void {
+    if (this.worldRadius === 0) {
+      this.worldRadius = config.worldRadius;
+      this.resize();
+    }
     const ctx = this.ctx;
     const cx = this.centerX;
     const cy = this.centerY;
@@ -269,6 +306,7 @@ export class Renderer {
   }
 
   private drawMinimap(world: World, config: SimConfig, rect: DOMRect): void {
+    if (rect.width < 500) return;
     const ctx = this.ctx;
     const mapSize = 100;
     const margin = 10;
@@ -364,7 +402,8 @@ export class Renderer {
 
     const lineHeight = 14;
     const padding = 6;
-    const width = 220;
+    const width = Math.min(220, rect.width * 0.6);
+    const fontSize = width < 180 ? 10 : 11;
     const height = lines.length * lineHeight + padding * 2;
 
     // Keep on screen
@@ -382,7 +421,7 @@ export class Renderer {
     ctx.fill();
     ctx.stroke();
 
-    ctx.font = '11px monospace';
+    ctx.font = `${fontSize}px monospace`;
     ctx.fillStyle = `hsl(${g.hue}, 70%, 70%)`;
     ctx.textAlign = 'left';
     lines.forEach((line, i) => {
